@@ -1,0 +1,462 @@
+//////////////////////////////////////////////////////////
+// This class has been automatically generated on
+// Sun Dec  4 15:47:37 2016 by ROOT version 5.34/37
+// from TChain EGTree/
+//////////////////////////////////////////////////////////
+
+#ifndef ProcessRuns_h
+#define ProcessRuns_h
+
+#include <TROOT.h>
+#include <TChain.h>
+#include <TFile.h>
+#include <vector>
+#include <TString.h>
+#include <iostream>
+#include <fstream>
+#include <cstdlib>
+#include <limits>
+#include <TTimeStamp.h>
+#include <TSystem.h>
+#include <TSystemDirectory.h>
+#include <TGraph.h>
+#include <TMath.h>
+#include <TVector3.h>
+#include <TLorentzVector.h>
+#include <W1Calibs.h>
+
+// Header file for the classes stored in the TTree if any.
+
+// Fixed size dimensions of array or collections stored in the TTree if any.
+
+class ProcessRuns {
+public :
+   TTree          *fChain;   //!pointer to the analyzed TTree or TChain
+   Int_t           fCurrent; //!current Tree number in a TChain
+
+   // Declaration of leaf types
+   Int_t           RunNumber;
+   Int_t           evtNum;
+   Int_t           scalarN;
+   Int_t           adcN;
+   Int_t           tdcN;
+   UShort_t        adcList[256];   //[adcN]
+   UShort_t        adcData[256];   //[adcN]
+   UShort_t        tdcList[256];   //[tdcN]
+   UShort_t        tdcData[256];   //[tdcN]
+   UShort_t        SPpos;
+   UShort_t        SPde;
+   UShort_t        SPwire;
+   UShort_t        SPplasp;
+   UShort_t        SPplasg;
+   Int_t           tick;
+
+   // List of branches
+   TBranch        *b_RunNumber;   //!
+   TBranch        *b_evtNum;   //!
+   TBranch        *b_scalarN;   //!
+   TBranch        *b_adcN;   //!
+   TBranch        *b_tdcN;   //!
+   TBranch        *b_adcList;   //!
+   TBranch        *b_adcData;   //!
+   TBranch        *b_tdcList;   //!
+   TBranch        *b_tdcData;   //!
+   TBranch        *b_SPpos;   //!
+   TBranch        *b_SPde;   //!
+   TBranch        *b_SPwire;   //!
+   TBranch        *b_SPplasp;   //!
+   TBranch        *b_SPplasg;   //!
+   TBranch        *b_tick; //!
+
+   ProcessRuns(TTree *tree=0);
+   virtual ~ProcessRuns();
+   virtual Int_t    Cut(Long64_t entry);
+   virtual Int_t    GetEntry(Long64_t entry);
+   virtual Long64_t LoadTree(Long64_t entry);
+   virtual void     Init(TTree *tree);
+   virtual void     Loop();
+   virtual Bool_t   Notify();
+   virtual void     Show(Long64_t entry = -1);
+};
+
+#endif
+
+#ifdef ProcessRuns_cxx
+ProcessRuns::ProcessRuns(TTree *tree) : fChain(0) 
+{
+// if parameter tree is not specified (or zero), connect the file
+// used to generate this class and read the Tree.
+   if (tree == 0) {
+
+#ifdef SINGLE_TREE
+      // The following code should be used if you want this class to access
+      // a single tree instead of a chain
+      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("Memory Directory");
+      if (!f || !f->IsOpen()) {
+         f = new TFile("Memory Directory");
+      }
+      f->GetObject("EGTree",tree);
+
+#else // SINGLE_TREE
+
+      // The following code should be used if you want this class to access a chain
+      // of trees.
+      TChain * chain = new TChain("EGTree","");
+      
+      std::ifstream runlist;
+      runlist.open("runlist");
+      
+      string LineBuffer;
+      vector<int> ListOfRuns;
+      vector<string> FilesOfRuns;
+      if(runlist.is_open())
+      {
+        while(!runlist.eof())
+        {
+            runlist >> LineBuffer;
+            cout << LineBuffer << endl;
+            if(LineBuffer.compare(0,1,"%") == 0){runlist.ignore(std::numeric_limits<std::streamsize>::max(), '\n' );}
+            else
+            {
+            ListOfRuns.push_back(atoi(LineBuffer.c_str()));
+            
+            char buffer[256];
+            sprintf(buffer,"../sorted/R%d_0_old.root/EGTree",atoi(LineBuffer.c_str()));
+            FilesOfRuns.push_back(buffer);
+            }
+        }
+      }
+      cout << "Using runs:" << endl;
+      for(unsigned int i=0;i<ListOfRuns.size();i++)
+      {
+            chain->Add(FilesOfRuns.at(i).c_str());
+            printf("%s\n",FilesOfRuns.at(i).c_str());
+      }
+      
+//       chain->Add("../sorted/R1_0_old.root/EGTree");
+//       chain->Add("../sorted/R2_0_old.root/EGTree");
+//       chain->Add("../sorted/R3_0_old.root/EGTree");
+//       chain->Add("../sorted/R4_0_old.root/EGTree");
+//       chain->Add("../sorted/R5_0_old.root/EGTree");
+      tree = chain;
+#endif // SINGLE_TREE
+
+   }
+   Init(tree);
+}
+
+ProcessRuns::~ProcessRuns()
+{
+   if (!fChain) return;
+   delete fChain->GetCurrentFile();
+}
+
+Int_t ProcessRuns::GetEntry(Long64_t entry)
+{
+// Read contents of entry.
+   if (!fChain) return 0;
+   return fChain->GetEntry(entry);
+}
+Long64_t ProcessRuns::LoadTree(Long64_t entry)
+{
+// Set the environment to read one entry
+   if (!fChain) return -5;
+   Long64_t centry = fChain->LoadTree(entry);
+   if (centry < 0) return centry;
+   if (fChain->GetTreeNumber() != fCurrent) {
+      fCurrent = fChain->GetTreeNumber();
+      Notify();
+   }
+   return centry;
+}
+
+void ProcessRuns::Init(TTree *tree)
+{
+   // The Init() function is called when the selector needs to initialize
+   // a new tree or chain. Typically here the branch addresses and branch
+   // pointers of the tree will be set.
+   // It is normally not necessary to make changes to the generated
+   // code, but the routine can be extended by the user if needed.
+   // Init() will be called many times when running on PROOF
+   // (once per file to be processed).
+
+   // Set branch addresses and branch pointers
+   if (!tree) return;
+   fChain = tree;
+   fCurrent = -1;
+   fChain->SetMakeClass(1);
+
+   fChain->SetBranchAddress("RunNumber", &RunNumber, &b_RunNumber);
+   fChain->SetBranchAddress("evtNum", &evtNum, &b_evtNum);
+   fChain->SetBranchAddress("scalarN", &scalarN, &b_scalarN);
+   fChain->SetBranchAddress("adcN", &adcN, &b_adcN);
+   fChain->SetBranchAddress("tdcN", &tdcN, &b_tdcN);
+   fChain->SetBranchAddress("adcList", adcList, &b_adcList);
+   fChain->SetBranchAddress("adcData", adcData, &b_adcData);
+   fChain->SetBranchAddress("tdcList", tdcList, &b_tdcList);
+   fChain->SetBranchAddress("tdcData", tdcData, &b_tdcData);
+   fChain->SetBranchAddress("SPpos", &SPpos, &b_SPpos);
+   fChain->SetBranchAddress("SPde", &SPde, &b_SPde);
+   fChain->SetBranchAddress("SPwire", &SPwire, &b_SPwire);
+   fChain->SetBranchAddress("SPplasp", &SPplasp, &b_SPplasp);
+   fChain->SetBranchAddress("SPplasg", &SPplasg, &b_SPplasg);
+   fChain->SetBranchAddress("tick", &tick, &b_tick);
+   Notify();
+}
+
+Bool_t ProcessRuns::Notify()
+{
+   // The Notify() function is called when a new file is opened. This
+   // can be either for a new TTree in a TChain or when when a new TTree
+   // is started when using PROOF. It is normally not necessary to make changes
+   // to the generated code, but the routine can be extended by the
+   // user if needed. The return value is currently not used.
+
+   return kTRUE;
+}
+
+void ProcessRuns::Show(Long64_t entry)
+{
+// Print contents of entry.
+// If entry is not specified, print current entry
+   if (!fChain) return;
+   fChain->Show(entry);
+}
+Int_t ProcessRuns::Cut(Long64_t entry)
+{
+// This function may be called from Loop.
+// returns  1 if entry is accepted.
+// returns -1 otherwise.
+   return 1;
+}
+#endif // #ifdef ProcessRuns_cxx
+
+void ReadTimeTable();
+
+map<Int_t, pair<TTimeStamp, TTimeStamp> > m_TimeTable;
+//map<Int_t, TSplitPoleNMR*> m_NMRTable;
+map<Int_t, Int_t> m_NarvalMidasTable;
+TTimeStamp m_RunStart, m_RunStop;
+double m_RunLength;
+
+double Calibration(float ADCValue, int ADCChannel)
+{
+    double result = 0;
+    result = CalibPars[ADCChannel][0] + CalibPars[ADCChannel][1] * ADCValue;
+    return result;
+}
+
+void ReadNMRForRun(int RunNumber, TGraph *graphy);
+
+double GetBField(double fAbsoluteTick, TGraph *graphy)
+{
+ double result = 0;
+ 
+ int npoints = graphy->GetN();
+ double xmin=-1, xmax=-1;
+ double ymin=-1, ymax=-1;
+ graphy->GetPoint(0,xmin,ymin);
+ graphy->GetPoint(npoints-1,xmax,ymax);
+//  cout << xmin << "\t" << xmax << endl;
+ 
+  if(fAbsoluteTick>xmin && fAbsoluteTick<xmax)
+ {
+   //cout << "GetBfield has good range" << endl;
+    result = graphy->Eval(fAbsoluteTick); 
+ }
+  else
+  {
+    //cout << "GetBField problem" << endl;
+      // cout << "fAbsoluteTick: " << fAbsoluteTick << endl;
+      //cout << "xmin: " << xmin << endl;
+      //cout << "xmax: " << xmax << endl;
+  }
+ return result;
+}
+
+double BrhoToEx(double Brho)
+{
+  //double m_proton = 938.782980; //MeV/c/c
+  double m_triton = 2809.431833; //MeV/c/c
+  double m_3He = 2809.413242; //MeV/c/c
+  //    double m_31P = 28851.87339; //MeV/c/c
+    double m_31S = 28857.2696; //MeV/c/c
+    double T1 = 25.000; //MeV
+ 
+    TVector3 p1vec(0,0,1);
+    p1vec.SetMag(sqrt(T1*(T1 + 2*m_3He)));
+ 
+    double p3 = TMath::C()/1e6 * Brho;
+    double T3 = sqrt(p3*p3 + m_triton*m_triton) - m_triton;
+    
+    double theta = 10.0 * TMath::Pi()/180.;//convert deg->rad
+    
+    TVector3 p3vec(0,0,1);
+    p3vec.SetTheta(theta);
+    p3vec.SetMag(p3);
+
+    TVector3 p4vec = p1vec - p3vec;
+
+    double T4 = sqrt(p4vec.Mag2() + m_31S*m_31S) - m_31S;
+
+    //double r = sqrt(m_proton*m_proton*T1)/(m_proton+m_19F) * cos(theta);
+    
+    //double s = T3 - 2*r*sqrt(T3);
+    
+    //double result = (T1*(m_19F - m_proton) - s*(m_19F+m_proton))/m_19F;
+
+    double result = T1 - T3 - T4 - 5.4148;
+    //cout << "Ex: " << Ex << endl;
+    return result;
+}
+
+double SiliconRecoilTheta = 0, SiliconRecoilPhi = 0;
+
+double KinematicsToQValue(double Brho, double SiliconEnergy, double SiliconMass = 938.782980, TVector3 VectorToSiliconHit = TVector3(0,0,-1))
+{
+  // cout << endl << endl;
+    
+    //    cout << "Brho in kinematics loop: " << Brho << endl;
+    
+    double Ex = BrhoToEx(Brho);
+    
+    //cout << "Ex: " << Ex << endl;
+    
+    double m_proton = 938.782980; //MeV/c/c
+    double m_31S = 28857.2696; //MeV/c/c
+    double m_30P = 27924.6197; //MeV/c/c
+    //double m_4He = 3728.43131565; //MeV/c/c
+
+    double m_triton = 2809.431833; //MeV/c/c
+    double m_3He = 2809.413242; //MeV/c/c
+    //double m_31P = 28851.87339; //MeV/c/c
+    double T1 = 25.000; //MeV
+    
+    //double m_31S_Ex = m_31S + Ex;
+    
+    double scalerp3 = TMath::C()/1e6 * Brho;
+    double T3 = sqrt(scalerp3*scalerp3 + m_triton*m_triton) - m_triton;
+    //cout << "T3: " << T3 << endl;
+    
+    double TRecoil = T1 - Ex - T3;
+    //cout << "Recoil Kinetic Energy: " << TRecoil << endl;
+    
+    double theta = 10.0 * TMath::Pi()/180.;//convert deg->rad
+    
+    TVector3 result(0,0,1);
+    TLorentzVector ProperResult;
+    
+    TVector3 p1(0.,0.,sqrt(T1*(T1+2*m_3He)));
+    //cout << "Ebeam: " << sqrt(p1.Mag2() + m_3He*m_3He) - m_3He << " MeV" << endl;
+    
+    TVector3 p2(0.,0.,0.);
+    
+    TVector3 p3(scalerp3*sin(theta),scalerp3*sin(theta)*sin(TMath::Pi()),scalerp3*cos(theta));
+    p3.SetPhi(TMath::Pi());
+    //cout << "T3: " << sqrt(p3.Mag2() + m_proton*m_proton) - m_proton << " MeV" << endl;
+    //p3.Print();
+    
+    TVector3 p4 = p1 - p3;
+    //cout << "T4: " << sqrt(p4.Mag2() + m_31S*m_31S) - m_31S << " MeV" << endl;
+    //p4.Print();
+    
+    
+    double LDPmomentum = sqrt(SiliconEnergy*(SiliconEnergy + 2*SiliconMass));
+    double thetaLDP = (VectorToSiliconHit.Theta());
+    //cout << "thetaLDP: " << thetaLDP << endl;
+    double phiLDP = (VectorToSiliconHit.Phi());
+    //cout << "phiLDP: " << phiLDP << endl;
+    
+    TVector3 LightDecayParticle3Momentum(LDPmomentum*sin(thetaLDP)*cos(phiLDP),LDPmomentum*sin(thetaLDP)*sin(phiLDP),LDPmomentum*cos(thetaLDP));
+    //cout << "LDP KE: " << sqrt(LightDecayParticle3Momentum.Mag2() + SiliconMass*SiliconMass) - SiliconMass << " MeV" << endl;
+    //LightDecayParticle3Momentum.Print();
+    
+    TVector3 HeavyDecayParticle3Momentum = p4 - LightDecayParticle3Momentum;
+    //cout << "HDP KE: " << sqrt(HeavyDecayParticle3Momentum.Mag2() + m_30P*m_30P) - m_30P << " MeV" << endl;
+    //HeavyDecayParticle3Momentum.Print();
+    
+    double Qvalue = T1 - T3 - (sqrt(LightDecayParticle3Momentum.Mag2() + SiliconMass*SiliconMass) - SiliconMass) - (sqrt(HeavyDecayParticle3Momentum.Mag2() + m_30P*m_30P) - m_30P);
+    
+    //(p1 - p3 - LightDecayParticle3Momentum - HeavyDecayParticle3Momentum).Print();
+    
+    //cout << "Qvalue: " << Qvalue << endl;
+    
+    return Qvalue;
+}
+
+TVector3 SiliconFlightPath(int DetNumRaw, int pStrip, int nStrip)
+{
+    int DetectorNumber = DetNumRaw+1;
+    TVector3 result(0,0,1);
+    
+    TVector3 DetectorCentre(0,0,1);
+    
+    TVector3 beam(0,0,1);
+    
+    TVector3 xprime(1,0,0);
+    TVector3 yprime(0,1,0);
+    TVector3 zprime(0,0,1);
+    
+    double phiCentre = TMath::Pi()/2.; //Set the default value to something which is defo wrong
+
+    if(DetectorNumber==1 || DetectorNumber==2)
+    {
+        DetectorCentre.SetMag(110.0);//In mm
+        double thetaCentre = 180-67;
+        thetaCentre *= TMath::Pi()/180.;
+        DetectorCentre.SetTheta(thetaCentre);
+        DetectorCentre.SetPhi(TMath::Pi());
+	phiCentre = TMath::Pi();
+    }
+    else if(DetectorNumber==3 || DetectorNumber==4)
+    {
+        DetectorCentre.SetMag(110.0);//in mm
+        double thetaCentre = 180-24;
+        thetaCentre *= TMath::Pi()/180.;
+        DetectorCentre.SetTheta(thetaCentre);
+        DetectorCentre.SetPhi(TMath::Pi());
+	phiCentre = TMath::Pi();
+    }
+    else if(DetectorNumber==5 || DetectorNumber==6)
+    {
+        DetectorCentre.SetMag(80.0);//in mm
+        double thetaCentre = 180-45;
+        thetaCentre *= TMath::Pi()/180.;
+        DetectorCentre.SetTheta(thetaCentre);
+        DetectorCentre.SetPhi(0);
+	phiCentre = 0;
+    }
+    if(DetectorNumber%2==1)//Odd-numbered detctors are at the bottom
+    {
+        DetectorCentre -= (1+5.5+25)*yprime;
+    }
+    else if(DetectorNumber%2==0)//even-numbered detectors are at the top
+    {
+        DetectorCentre += (1+5.5+25)*yprime;
+    }
+    
+//     cout << DetectorCentre.Mag() << endl;
+    
+    result = DetectorCentre;
+    xprime.SetX(cos(DetectorCentre.Theta()));
+    xprime.SetY(0);
+    xprime.SetZ(-1.*sin(DetectorCentre.Theta())*cos(phiCentre));
+    
+    zprime.SetX(sin(DetectorCentre.Theta())*cos(phiCentre));
+    zprime.SetY(0);
+    zprime.SetZ(cos(DetectorCentre.Theta()));
+    
+    if(DetectorNumber>=1 && DetectorNumber<=4)
+    {
+        result -= yprime*(3.1*(pStrip - 7) + (pStrip - pStrip%8)/8*1.5);
+        result += xprime*3.1*(nStrip-7);
+//         result += zprime*3.1*(nStrip-7);
+    }
+    if(DetectorNumber==5 || DetectorNumber==6)
+    {
+        result += yprime*(3.1*(pStrip - 7) + (pStrip - pStrip%8)/8*1.5);
+        result -= xprime*3.1*(nStrip-7);
+//         result -= zprime*3.1*(nStrip-7);
+    }
+    return result;
+}

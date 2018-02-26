@@ -1,0 +1,6 @@
+#! /bin/bash
+
+for i in `find . -name 'R*.gz'`
+do
+    j=${i%_*
+gunzip *.gz
